@@ -136,6 +136,8 @@ main{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
 .ck{width:30px;height:30px;border-radius:50%;border:2px solid var(--mut);flex:none}
 .ok{color:var(--acc);font-weight:600;width:30px;text-align:center}
 .mu{color:var(--mut);font-size:13px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.lnk2{height:36px;padding:0 12px;border-radius:18px;background:var(--soft);font-size:13px;font-weight:500}
 .rates{display:flex;gap:8px;margin:14px 0}
 .rt{flex:1;height:56px;border-radius:16px;background:var(--soft);font-size:26px;transition:transform .15s,background .2s}
 .rt.on{background:color-mix(in srgb,var(--acc) 22%,transparent);transform:scale(1.08)}
@@ -151,6 +153,7 @@ main{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
   <div><button class="icon" data-act="cfg" aria-label="Personnaliser">⚙</button><button class="icon" id="more" data-act="menu" aria-label="Options de la liste">⋮</button></div></div>
   <nav id="tabs" aria-label="Listes"></nav>
 </div></header>
+<input type="file" id="imp" accept="application/json,.json" hidden>
 <div id="home"></div>
 <section id="edt" class="edt"></section>
 <main id="main"></main>
@@ -247,7 +250,9 @@ function renderSheet(){
   else if(s==='cfg'){p.innerHTML=`<div class="bar"></div><h3 style="margin:0 0 8px;font-size:18px">Personnaliser</h3>
     <button class="mi" data-act="wiz"><span>🧭</span>Questionnaire sur mon emploi du temps</button>
     <button class="mi" data-act="spec"><span>📅</span>Jours spéciaux (grève, jour libre…)</button>
-    <button class="mi" data-act="edtpw"><span>🔑</span>Mot de passe des cours</button>`}
+    <button class="mi" data-act="edtpw"><span>🔑</span>Mot de passe des cours</button>
+    <button class="mi" data-act="export"><span>⤓</span>Exporter une sauvegarde</button>
+    <button class="mi" data-act="import"><span>⤒</span>Importer une sauvegarde</button>`}
   else if(s==='wiz'){p.innerHTML=wizHTML();p.scrollTop=0}
   else if(s==='spec'){p.innerHTML=specHTML()}
   else{
@@ -312,6 +317,10 @@ document.addEventListener('click',e=>{
     case 'spec':ui.sheet='spec';break;
     case 'spadd':if($('#sd').value)S.special.push({id:uid(),d:$('#sd').value,k:$('#sk').value,n:$('#sn').value.trim()});break;
     case 'spdel':S.special=S.special.filter(x=>x.id!==el.dataset.id);break;
+    case 'resume':S.resume={d:today(),m:Math.ceil(nowMin()/5)*5};vib(10);break;
+    case 'light':S.light=S.light===today()?'':today();break;
+    case 'export':{const a2=document.createElement('a');a2.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a2.download='mon-cap-sauvegarde-'+today()+'.json';a2.click();return}
+    case 'import':$('#imp').click();return;
     case 'tab':ui.tab=el.dataset.t;ui.sheet=null;window.scrollTo(0,0);break;
     case 'cfg':ui.sheet='cfg';break;
     case 'hday':ui.hd=+el.dataset.d;break;
@@ -369,7 +378,7 @@ document.addEventListener('keydown',e=>{
 const E={lessons:null,day:0,err:''};
 try{E.lessons=JSON.parse(localStorage.getItem('edtcache'))}catch(e){}
 const b64u=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-async /*HW*/
+/*HW*/
 function importHw(hw){S.hwDone=S.hwDone||[];let ch=false,l=S.lists.find(x=>x.hw);
   hw.forEach(h=>{const k=String(h.id);if(!k||S.hwDone.includes(k))return;S.hwDone.push(k);ch=true;if(h.done)return;
     if(!l){l={id:'hw',name:'Devoirs',hw:true};S.lists.push(l)}
@@ -433,9 +442,10 @@ function plan(d){
   const q=S.tasks.filter(t=>!t.parent&&((!t.done&&(!t.date||t.date<=d||(t.hw&&t.date<=addDay(d,3))))||(t.done&&t.doneAt===d))).sort((a,b)=>{const x=key(a),y=key(b);return x[0]-y[0]||(x[1]<y[1]?-1:x[1]>y[1]?1:0)||x[2]-y[2]})
     .map(t=>({t:'task',title:t.title,id:t.id,done:t.done,dur:+t.dur||0}));
   const subs=subjectsList(d);let ri=0;
-  const next=()=>{if(q.length)return q.shift();if(c.fill==='0')return null;if(!subs.length)return{t:'revision',title:'Session de révision',subject:'Révision'};const m=subs[ri++%subs.length];return{t:'revision',title:'Réviser · '+m,subject:m}};
-  const bl=+c.block||50,br=+c.brk||10;
-  gaps.forEach(([s,e])=>{let t=s;
+  const next=()=>{if(q.length)return q.shift();if(c.fill==='0'||S.light===d)return null;if(!subs.length)return{t:'revision',title:'Session de révision',subject:'Révision'};const m=subs[ri++%subs.length];return{t:'revision',title:'Réviser · '+m,subject:m}};
+  const lt=S.light===d,R=S.resume&&S.resume.d===d?S.resume.m:0;
+  const bl=lt?30:(+c.block||50),br=lt?15:(+c.brk||10);
+  gaps.forEach(([s0,e])=>{let t=Math.max(s0,R);
     while(e-t>=25){const it=next();if(!it)break;let len=Math.min(it.dur||bl,e-t);if(it.t==='revision'&&e-t-len<25)len=e-t;out.push({s:t,e:t+len,...it});t+=len;
       if(e-t>=br+25){out.push({s:t,e:t+br,t:'pause',title:'Pause'});t+=br}}
     if(e-t>=5)out.push({s:t,e,t:'pause',title:'Temps libre'})});
@@ -444,6 +454,8 @@ function plan(d){
   return all}
 const parseRt=v=>v.split('\n').map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^(.*?)[,;\s]+(\d+)\s*(min)?$/i);return m?{l:m[1].trim(),m:+m[2]}:{l:x,m:5}});
 /*ENDPURE*/
+const hue=x=>{let h=0;for(const ch of x||'')h=(h*31+ch.charCodeAt(0))%360;return h};
+const dot=b=>b.t==='cours'||b.t==='revision'?`<i class="dot" style="background:hsl(${hue(b.subject||b.title)} 62% 62%)"></i>`:'';
 const TYPE={cours:'Cours',repas:'Repas',task:'Tâche',revision:'Révision',pause:'Pause',routine:'Routine',fixe:'Obligation'};
 const KS={greve:'Grève / pas de cours',libre:'Jour libre',note:'Cours maintenus (simple note)'};
 const DL=['D','L','M','M','J','V','S'],DORD=[1,2,3,4,5,6,0];
@@ -493,14 +505,15 @@ function renderHome(){
   let hero;
   if(cur){const left=cur.e-n,lt=left>=60?Math.floor(left/60)+' h '+String(left%60).padStart(2,'0'):left+' min';
     const k=({cours:'Cours en ce moment',repas:'Repas',pause:'Pause',routine:'Routine',fixe:'Obligation'})[cur.t]||(cur.done?'Fait ✓':'À faire maintenant');
-    hero=`<div class="k">${k}</div><div class="t">${esc(cur.title)}</div><div class="m">${hhmm(cur.s)} – ${hhmm(cur.e)} · encore ${lt}${cur.sub?' · '+esc(cur.sub):''}</div><div class="prog"><i style="width:${Math.round((n-cur.s)/(cur.e-cur.s)*100)}%"></i></div>
+    hero=`<div class="k">${k}</div><div class="t">${dot(cur)}${esc(cur.title)}</div><div class="m">${hhmm(cur.s)} – ${hhmm(cur.e)} · encore ${lt}${cur.sub?' · '+esc(cur.sub):''}</div><div class="prog"><i style="width:${Math.round((n-cur.s)/(cur.e-cur.s)*100)}%"></i></div>
     ${(cur.t==='task'||cur.t==='revision')&&!cur.done?`<button class="pill main" style="width:100%;margin-top:8px" data-act="blk" data-d="${td}" data-s="${cur.s}">Terminé ✓</button>`:''}
-    ${nx?`<div class="nx">Ensuite · ${hhmm(nx.s)} ${esc(nx.title)}</div>`:''}`}
+    ${nx?`<div class="nx">Ensuite · ${hhmm(nx.s)} ${esc(nx.title)}</div>`:''}
+    <div class="row2" style="margin-top:12px"><button class="lnk2" data-act="resume">↻ J’ai pris du retard</button><button class="lnk2" data-act="light">${S.light===td?'Reprendre le rythme normal':'☾ Journée légère'}</button></div>`}
   else if(nx){hero=`<div class="k">Bientôt</div><div class="t">${esc(nx.title)}</div><div class="m">à ${hhmm(nx.s)}</div>`}
   else{const tm=plan(addDay(td,1)).find(b=>b.t!=='pause'&&b.t!=='repas');
     hero=`<div class="k">Journée terminée</div><div class="t">Repose-toi</div><div class="m">${tm?'Demain, '+hhmm(tm.s)+' : '+esc(tm.title):'Rien de prévu demain.'}</div>`}
   const hd=ui.hd,dd=addDay(td,hd),tp=hd?plan(dd):pl;
-  const rows=tp.map(b=>`<div class="tl ${hd===0&&b.e<=n?'past':''} ${hd===0&&b.s<=n&&n<b.e?'now':''}"><div class="h">${hhmm(b.s)}</div><div class="bx"><div class="s ${b.done?'dn':''}">${esc(b.title)}</div><div class="r">${TYPE[b.t]} · ${b.e-b.s} min${b.sub?' · '+esc(b.sub):''}</div></div>${(b.t==='task'||b.t==='revision')&&!b.done?`<button class="ck" data-act="blk" data-d="${dd}" data-s="${b.s}" aria-label="Terminé"></button>`:b.done?'<span class="ok">✓</span>':''}</div>`).join('');
+  const rows=tp.map(b=>`<div class="tl ${hd===0&&b.e<=n?'past':''} ${hd===0&&b.s<=n&&n<b.e?'now':''}"><div class="h">${hhmm(b.s)}</div><div class="bx"><div class="s ${b.done?'dn':''}">${dot(b)}${esc(b.title)}</div><div class="r">${TYPE[b.t]} · ${b.e-b.s} min${b.sub?' · '+esc(b.sub):''}</div></div>${(b.t==='task'||b.t==='revision')&&!b.done?`<button class="ck" data-act="blk" data-d="${dd}" data-s="${b.s}" aria-label="Terminé"></button>`:b.done?'<span class="ok">✓</span>':''}</div>`).join('');
   const warn=!localStorage.getItem('edtpass')?`<div class="hc"><div class="mu">Connecte tes cours Pronote pour que le planning tienne compte de ton emploi du temps.</div><button style="color:var(--acc);font-weight:500;height:36px" data-act="edtpw">Entrer le mot de passe</button></div>`:E.err?`<div class="hc mu" style="color:var(--red)">${E.err}</div>`:'';
   $('#home').innerHTML=`<div class="hh"><div><div class="sub">${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${dayInfo(td).hol?' · '+esc(dayInfo(td).hol):''}</div><h1>Principal</h1></div><button class="icon" data-act="cfg" aria-label="Personnaliser">⚙</button></div>
   ${S.setup?'':`<div class="hc"><h3>Faisons connaissance</h3><div class="mu" style="margin:4px 0 10px">Réponds à quelques questions sur ton emploi du temps (internat, repas, soirs, week-end, routines) pour que je planifie vraiment tes journées.</div><button class="pill main" style="width:100%" data-act="wiz">Commencer le questionnaire</button></div>`}${warn}${(()=>{const di=dayInfo(td);return di.hol||di.sp.length?`<div class="hc mu">${di.hol?'Jour férié : '+esc(di.hol)+'. ':''}${di.sp.map(x=>KS[x.k]+(x.n?' ('+esc(x.n)+')':'')).join(', ')}</div>`:''})()}<div class="hc hero">${hero}</div>
@@ -510,6 +523,9 @@ function renderNav(){document.body.dataset.tab=ui.tab;document.querySelectorAll(
 function renderEdt(){renderHome()}
 setInterval(()=>{if(ui.tab==='home'&&!ui.sheet)renderHome()},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderHome()});
+document.addEventListener('change',e=>{if(e.target.id!=='imp')return;const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{const o=JSON.parse(t);if(!o.tasks||!o.lists)throw 0;if(confirm('Remplacer toutes tes données par cette sauvegarde ?')){localStorage.setItem('gtasks',JSON.stringify(o));location.reload()}}).catch(()=>alert('Fichier de sauvegarde invalide.'))});
+const qa=new URLSearchParams(location.search).get('a');if(qa==='new'&&S.cur!=='starred'){ui.tab='tasks';ui.sheet='add'}
 if(!curList()&&S.cur!=='starred')S.cur=S.lists[0].id;
 render();renderEdt();loadEdt();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
