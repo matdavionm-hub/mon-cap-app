@@ -29,7 +29,21 @@ for l in client.lessons(start, end):
     })
 lessons.sort(key=lambda x: x["start"])
 
-plain = json.dumps({"lessons": lessons}, ensure_ascii=False, sort_keys=True).encode()
+homework = []
+try:
+    for h in client.homework(start, start + dt.timedelta(days=21)):
+        homework.append({
+            "id": str(getattr(h, "id", "")),
+            "subject": h.subject.name if getattr(h, "subject", None) else None,
+            "description": getattr(h, "description", "") or "",
+            "date": h.date.isoformat()[:10],
+            "done": bool(getattr(h, "done", False)),
+        })
+except Exception as e:  # les cours restent synchronisés même si les devoirs échouent
+    print("Devoirs non récupérés :", e)
+homework.sort(key=lambda x: x["date"])
+
+plain = json.dumps({"lessons": lessons, "homework": homework}, ensure_ascii=False, sort_keys=True).encode()
 key = PBKDF2HMAC(hashes.SHA256(), 32, b"mon-cap-edt-v1", 200000).derive(os.environ["EDT_PASSPHRASE"].encode())
 iv = hmac.new(key, plain, hashlib.sha256).digest()[:12]  # même contenu = même fichier (pas de commit inutile)
 data = AESGCM(key).encrypt(iv, plain, None)
@@ -38,4 +52,4 @@ b64 = lambda b: base64.b64encode(b).decode()
 os.makedirs("data", exist_ok=True)
 with open("data/edt.enc.json", "w") as f:
     json.dump({"v": 1, "iv": b64(iv), "data": b64(data)}, f)
-print(f"{len(lessons)} cours chiffrés et enregistrés")
+print(f"{len(lessons)} cours et {len(homework)} devoirs chiffrés et enregistrés")
