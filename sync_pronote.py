@@ -38,6 +38,7 @@ try:
             "description": getattr(h, "description", "") or "",
             "date": h.date.isoformat()[:10],
             "done": bool(getattr(h, "done", False)),
+            "files": [{"name": getattr(f, "name", "Fichier"), "url": getattr(f, "url", "")} for f in (getattr(h, "files", None) or [])],
         })
 except Exception as e:  # les cours restent synchronisés même si les devoirs échouent
     print("Devoirs non récupérés :", e)
