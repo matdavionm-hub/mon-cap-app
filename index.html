@@ -396,7 +396,7 @@ document.addEventListener('click',e=>{
     case 'detopen':ui.open=el.dataset.id;ui.sheet='task';break;
     case 'hwedit':ui.sheet='task';break;
     case 'hwdone':{const t3=get(ui.open);toggle(t3);if(t3.done){ui.rate={kind:'task',title:t3.title,subject:t3.hwSubject||t3.title,mins:null,bk:null,r:0,tags:[]};ui.sheet='rate'}break}
-    case 'rkind':{const r=S.rec.find(x=>x.id===el.dataset.id);r.k=el.dataset.k;break}
+    case 'rkind':{const r=S.rec.find(x=>x.id===el.dataset.id),k=el.dataset.k;r.k=(k&&r.k===k)?'':k;break}
     case 'rwork':{const r=S.rec.find(x=>x.id===el.dataset.id);r.k=r.k==='work'?'':'work';break}
     case 'reset':if(confirm('Réinitialiser l’application ? Toutes tes tâches, ton planning et ton suivi seront supprimés.')&&confirm('Dernière confirmation : tout effacer ?')){['gtasks','edtcache','edtpass'].forEach(k=>localStorage.removeItem(k));location.reload()}return;
     case 'close':ui.sheet=null;break;
