@@ -3,9 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f6f7f9">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mon Cap">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Tâches</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mon Cap">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Mon Cap</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--fg:#16181d;--mut:#6b7280;--line:#e6e8ec;--soft:#eef0f4;--acc:#3b5bdb;--onacc:#fff;--red:#d6336c;--sh:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.05)}
@@ -288,17 +300,18 @@ async function loadEdt(){
     const p=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64u(j.iv)},k,b64u(j.data));
     E.lessons=JSON.parse(new TextDecoder().decode(p)).lessons;E.err='';
     try{localStorage.setItem('edtcache',JSON.stringify(E.lessons))}catch(e){}
-  }catch(e){E.err=e.message==='fichier'?'Synchro introuvable.':'Mot de passe de chiffrement incorrect ou synchro indisponible.'}
+  }catch(e){E.err=e.message==='fichier'?'Synchro introuvable.':e.name==='TypeError'?(E.lessons?'Hors ligne : dernière synchro affichée.':'Hors ligne.'):'Mot de passe de chiffrement incorrect ou synchro indisponible.'}
   renderEdt()}
 function renderEdt(){
   const pw=localStorage.getItem('edtpass'),el=$('#edt'),d=inDays(E.day);
   if(!pw){el.innerHTML=`<div class="card"><h3>Cours Pronote</h3><div class="mut">Entre le mot de passe de chiffrement pour afficher tes cours.</div><button class="lnk" data-act="edtpw">Entrer le mot de passe</button></div>`;return}
   const ls=(E.lessons||[]).filter(l=>l.start.slice(0,10)===d);
   el.innerHTML=`<div class="card"><div class="top"><h3>Cours</h3><div class="seg"><button class="${E.day===0?'on':''}" data-act="edtday" data-d="0">Auj.</button><button class="${E.day===1?'on':''}" data-act="edtday" data-d="1">Demain</button></div><button class="icon" style="width:32px;height:32px;font-size:16px" data-act="edtpw" aria-label="Changer le mot de passe">⚙</button></div>
-  ${E.err?`<div class="mut" style="color:var(--red)">${E.err}</div>`:''}
+  ${E.err?`<div class="mut" style="${E.err.includes('incorrect')?'color:var(--red)':''}">${E.err}</div>`:''}
   ${ls.length?ls.map(l=>`<div class="les ${l.canceled?'x':''}"><div class="h">${l.start.slice(11,16)}</div><div><div class="s">${esc(l.subject||'Cours')}${l.canceled?'<span class="chip late">Annulé</span>':l.status?`<span class="chip">${esc(l.status)}</span>`:''}</div><div class="r">${esc([l.room,l.teacher].filter(Boolean).join(' · '))} · jusqu’à ${l.end.slice(11,16)}</div></div></div>`).join(''):`<div class="mut">${E.lessons?'Aucun cours ce jour-là.':'Chargement…'}</div>`}</div>`}
 if(!curList()&&S.cur!=='starred')S.cur=S.lists[0].id;
 render();renderEdt();loadEdt();
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
 </html>
