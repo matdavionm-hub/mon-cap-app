@@ -236,7 +236,7 @@ const vib=n=>{try{navigator.vibrate&&navigator.vibrate(n)}catch(e){}};
 let S;try{S=JSON.parse(localStorage.getItem('gtasks'))}catch(e){}
 S=S||{lists:[{id:'l1',name:'Mes tâches'}],tasks:[],cur:'l1',sort:'order',showDone:true};
 const ui={sheet:null,open:null,fx:null,tab:'home',hd:0,rate:null,ag:{mode:'week',off:0}};
-S.cfg=Object.assign({wake:'07:00',sleep:'22:30',wakeWE:'09:00',sleepWE:'23:30',wakeOff:'08:00',sleepOff:'22:00',meals:[{n:'Repas',t:'19:00',d:45}],block:50,brk:10,subjects:'',fill:'1',weWork:3,internat:{1:'17:00',2:'17:00',3:'13:00',4:'17:00',5:'',6:'',0:''}},S.cfg||{});S.cut=S.cut||{};S.places=S.places||[{id:'music',n:'Salle de musique',w:{1:[[480,690],[780,1020]],2:[[480,690],[780,1020]],3:[[480,690]],4:[[480,690],[780,1020]],5:[[480,690],[780,1020]]}}];S.mornDay=S.mornDay||{};S.cfg.wakeDay=S.cfg.wakeDay||{};S.habits=S.habits||[];S.hlog=S.hlog||{};S.day=S.day||{};S.alerts=S.alerts||[];S.exams=S.exams||[];S.prepChk=S.prepChk||{};
+S.cfg=Object.assign({wake:'07:00',sleep:'22:30',wakeWE:'09:00',sleepWE:'23:30',wakeOff:'08:00',sleepOff:'22:00',busOn:'1',busStopAM:'LR',busLinesAM:'E91',busStopPM:'LV',busLinesPM:'both',busSchool:'AP',busWalk:10,busMargin:5,busHomeWalk:5,catchMin:90,vacAuto:'1',meals:[{n:'Repas',t:'19:00',d:45}],block:50,brk:10,subjects:'',fill:'1',weWork:3,internat:{1:'17:00',2:'17:00',3:'13:00',4:'17:00',5:'',6:'',0:''}},S.cfg||{});S.cut=S.cut||{};S.places=S.places||[{id:'music',n:'Salle de musique',w:{1:[[480,690],[780,1020]],2:[[480,690],[780,1020]],3:[[480,690]],4:[[480,690],[780,1020]],5:[[480,690],[780,1020]]}}];S.mornDay=S.mornDay||{};S.cfg.wakeDay=S.cfg.wakeDay||{};S.habits=S.habits||[];S.hlog=S.hlog||{};S.day=S.day||{};S.alerts=S.alerts||[];S.exams=S.exams||[];S.prepChk=S.prepChk||{};
 S.log=S.log||[];S.rec=S.rec||[];S.morning=S.morning||[];S.late=S.late||[];S.special=S.special||[];
 let svWarn=0;const save=()=>{try{localStorage.setItem('gtasks',JSON.stringify(S))}catch(e){if(!svWarn++)alert('Stockage du téléphone plein : tes dernières modifications ne sont pas enregistrées. Fais une sauvegarde dans les réglages.')}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -251,7 +251,7 @@ const isCx=l=>l.canceled||(S.cx&&S.cx[l.start]);
 const inView=t=>S.cur==='starred'?t.starred:S.cur==='tomorrow'?t.date===addDay(today(),1):t.list===S.cur;
 S.cx=S.cx||{};{const k=iso(new Date(Date.now()-14*864e5));for(const x in S.cx)if(x.slice(0,10)<k)delete S.cx[x]}
 {let dl=S.lists.find(l=>l.daily)||S.lists.find(l=>/journali/i.test(l.name));if(!dl){dl={id:'daily',name:'Tâche journalière'};S.lists.push(dl)}dl.daily=true}
-function resetDaily(){const td=today(),ids=new Set(S.lists.filter(l=>l.daily).map(l=>l.id));let ch=false;S.tasks.forEach(t=>{if(t.done&&ids.has(t.list)&&(t.doneAt||'')<td){t.done=false;t.doneAt='';ch=true}});return ch}
+function resetDaily(){const td=today(),ids=new Set(S.lists.filter(l=>l.daily).map(l=>l.id));let ch=false;S.tasks.forEach(t=>{if(t.done&&ids.has(t.list)){if(!t.doneAt){t.doneAt=td;ch=true}else if(t.doneAt<td){t.done=false;t.doneAt='';ch=true}}});return ch}
 resetDaily();
 const fmt=d=>d===today()?'Aujourd’hui':d===inDays(1)?'Demain':new Date(d+'T00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
 const get=id=>S.tasks.find(t=>t.id===id);
@@ -301,7 +301,7 @@ function renderMain(){
   const todo=sorted(all.filter(t=>!t.done)),done=all.filter(t=>t.done);
   const drag=!virt&&S.sort==='order'&&todo.length>1;
   const blk=(t,c,g)=>`<div class="blk ${c} ${ui.fx===t.id?'in':''}" data-id="${t.id}">${block(t,virt,g)}</div>`;
-  $('#main').innerHTML=(curList()&&curList().daily?'<div class="mu" style="margin:0 4px 12px">↻ Ces tâches se remettent à faire chaque matin.</div>':'')+(todo.length?`<div id="list">${todo.map(t=>blk(t,'todo',drag)).join('')}</div>`
+  $('#main').innerHTML=(S.sort!=='order'&&!virt?`<div class="mu" style="margin:0 4px 12px">Tri par ${S.sort==='date'?'date':'titre'} · le planning suit « Mon ordre ». <button class="chip" data-act="sort" data-k="order">Revenir à Mon ordre</button></div>`:'')+(curList()&&curList().daily?'<div class="mu" style="margin:0 4px 12px">↻ Ces tâches se remettent à faire chaque matin.</div>':'')+(todo.length?`<div id="list">${todo.map(t=>blk(t,'todo',drag)).join('')}</div>`
    :`<div class="empty"><b>${done.length?'Tout est fait':'Aucune tâche'}</b>${done.length?'Profite de ta journée.':'Touche + pour en ajouter une.'}</div>`)+
    (done.length?`<button class="done-h" data-act="showdone"><span>${S.showDone?'▾':'▸'}</span>Terminées (${done.length})</button>${S.showDone?done.map(t=>blk(t,'dn',false)).join(''):''}`:'');
   ui.fx=null}
@@ -326,6 +326,12 @@ function renderSheet0(){
     <button class="mi" data-act="rename"><span>✎</span>Renommer la liste</button>
     <button class="mi" data-act="clear"><span>✓</span>Supprimer les tâches terminées</button>
     <button class="mi del" data-act="dellist" ${S.lists.length<2?'disabled style="opacity:.4"':''}><span style="color:inherit">🗑</span>Supprimer la liste</button>`}
+  else if(s==='mv'){const t=get(ui.mvId);if(!t){ui.sheet=null;return renderSheet()}
+    const ids=sorted(S.tasks.filter(x=>!x.parent&&inView(x)&&!x.done)).map(x=>x.id),i=ids.indexOf(t.id);
+    p.innerHTML=`<div class="sh"><div class="bar"></div><button class="x" data-act="close" aria-label="Fermer">✕</button></div>
+    <div class="k2">Changer la priorité</div><h3 style="margin:2px 0 0;font-size:20px;padding-right:40px">${esc(t.title)}</h3><div class="mu">Position ${i+1} sur ${ids.length} · plus haut = plus prioritaire</div>
+    <div class="card2 pal" style="margin-top:14px"><button data-act="mvto" data-k="top">Tout en haut<span>⤒</span></button><button data-act="mvto" data-k="up">Monter d’un cran<span>↑</span></button><button data-act="mvto" data-k="down">Descendre d’un cran<span>↓</span></button><button data-act="mvto" data-k="bottom">Tout en bas<span>⤓</span></button></div>
+    <div class="foot"><button class="pill main" data-act="close">Terminé</button></div>`}
   else if(s==='rate'){const r=ui.rate;if(!r){ui.sheet=null;return renderSheet()}
     p.innerHTML=`<div class="sh"><div class="bar"></div><button class="x" data-act="rateskip" aria-label="Passer">✕</button></div>
     <div class="k2">Session terminée</div><h3 style="margin:2px 0 0;font-size:20px;padding-right:40px">${esc(r.title)}</h3>${r.mins?`<div class="mu">Prévu ${r.mins} min${r.real!==undefined&&r.real!==r.mins?' · fait '+r.real+' min':''}</div>`:''}
@@ -368,12 +374,12 @@ function renderSheet0(){
     <input id="ps" placeholder="+ Ajouter une sous-tâche" enterkeyhint="done">`}
     <div class="row2" style="margin-top:20px">${mv?`<button class="pill" data-act="mv" data-d="-1" aria-label="Monter">▲ Monter</button><button class="pill" data-act="mv" data-d="1" aria-label="Descendre">▼ Descendre</button>`:''}<span style="flex:1"></span><button class="pill del" data-act="deltask">Supprimer</button></div>`}}
 
-function render(){renderHead();renderMain();renderSheet();renderNav();renderHome();renderAgenda()}
+function render(){if(dragging){ui.pr=1;return}renderHead();renderMain();renderSheet();renderNav();renderHome();renderAgenda()}
 function addTask(o){const t={id:uid(),list:(S.cur==='starred'||S.cur==='tomorrow')?S.lists[0].id:S.cur,title:'',notes:'',date:'',starred:false,done:false,parent:null,repeat:'',created:Date.now(),...o};S.tasks.push(t);return t}
 function removeTask(id){S.tasks=S.tasks.filter(t=>t.id!==id&&t.parent!==id)}
 function toggle(t){t.done=!t.done;t.doneAt=t.done?today():'';
   if(t.done&&t.repeat&&!t.parent){const rd=t.rd||(t.date?+t.date.slice(8,10):0);let nd=nextDate(t.date,t.repeat,rd),g=0;while(nd<today()&&g++<400)nd=nextDate(nd,t.repeat,rd);addTask({list:t.list,title:t.title,notes:t.notes,starred:t.starred,repeat:t.repeat,dur:t.dur,place:t.place,rd,date:nd})}
-  if(t.done)S.tasks.filter(s=>s.parent===t.id).forEach(s=>s.done=true)}
+  if(t.done)S.tasks.filter(s=>s.parent===t.id).forEach(s=>{s.done=true;s.doneAt=today()})}
 function complete(b,rw,t){vib(10);b.classList.add('leaving');rw.classList.add('done','pop');
   b.style.height=b.offsetHeight+'px';
   setTimeout(()=>b.classList.add('collapse'),420);
@@ -406,9 +412,9 @@ function startDrag(e){
     document.removeEventListener('touchmove',tm);document.removeEventListener('contextmenu',cm);bd.style.userSelect=bd.style.webkitUserSelect='';
     if(ok&&idx!==i0&&box.isConnected){const order=dragOrder(items.map(x=>x.dataset.id),i0,idx);
       b.style.transition='transform .16s';b.style.transform=`translateY(${dragOff(rect,i0,idx)}px)`;
-      setTimeout(()=>{reorder(order);save();render();dragging=false},170)}
+      setTimeout(()=>{try{reorder(order);save()}finally{dragging=false;ui.pr=0;render()}},170)}
     else{b.style.transition='transform .16s';b.style.transform='';items.forEach(x=>{x.style.transform=''});
-      setTimeout(()=>{b.classList.remove('drag');items.forEach(x=>{x.style.transition=''});b.style.transition='';dragging=false},170)}};
+      setTimeout(()=>{b.classList.remove('drag');items.forEach(x=>{x.style.transition=''});b.style.transition='';dragging=false;if(ok&&!moved){ui.mvId=b.dataset.id;ui.sheet='mv';ui.pr=0;render()}else if(ui.pr){ui.pr=0;render()}},170)}};
   const up=()=>fin(true),cn=()=>fin(false);
   h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',cn);h.addEventListener('lostpointercapture',cn);
   document.addEventListener('touchmove',tm,{passive:false});document.addEventListener('contextmenu',cm);raf=requestAnimationFrame(tick)}
@@ -428,6 +434,7 @@ document.addEventListener('click',e=>{
     case 'bday':ui.bd=+el.dataset.w;ui.ro=null;ui.pa=false;break;
     case 'rtoggle':ui.ro=ui.ro===el.dataset.id?null:el.dataset.id;break;
     case 'paopen':ui.pa=true;break;
+    case 'mvto':{const ids=sorted(S.tasks.filter(x=>!x.parent&&inView(x)&&!x.done)).map(x=>x.id),i=ids.indexOf(ui.mvId);if(i<0)break;const k=el.dataset.k,j=k==='top'?0:k==='bottom'?ids.length-1:k==='up'?Math.max(0,i-1):Math.min(ids.length-1,i+1);if(j!==i){ids.splice(j,0,ids.splice(i,1)[0]);reorder(ids)}break}
     case 'cx':{const k=el.dataset.k;S.cx=S.cx||{};if(S.cx[k])delete S.cx[k];else S.cx[k]=1;ui.sheet=null;vib(8);break}
     case 'rdel':S.rec=S.rec.filter(r=>r.id!==el.dataset.id);break;
     case 'rday':{const r=S.rec.find(x=>x.id===el.dataset.id),w2=+el.dataset.w,i2=r.d.indexOf(w2);i2>-1?r.d.splice(i2,1):r.d.push(w2);break}
@@ -498,7 +505,7 @@ document.addEventListener('click',e=>{
     case 'mv':{const ids=S.tasks.filter(x=>!x.parent&&!x.done&&x.list===S.cur).map(x=>x.id),i=ids.indexOf(ui.open),j=i+ +el.dataset.d;
       if(i>-1&&ids[j]){[ids[i],ids[j]]=[ids[j],ids[i]];reorder(ids);vib(8)}break}
     case 'deltask':removeTask(ui.open);ui.sheet=null;break;
-    case 'ptoggle':{const s=get(rw.dataset.id);s.done=!s.done;break}
+    case 'ptoggle':{const s=get(rw.dataset.id);s.done=!s.done;s.doneAt=s.done?today():'';break}
     case 'psubdel':removeTask(rw.dataset.id);break;
   }
   save();render()});
@@ -554,7 +561,23 @@ function renderEdtOld(){
   ${E.err?`<div class="mut" style="${E.err.includes('incorrect')?'color:var(--red)':''}">${E.err}</div>`:''}
   ${ls.length?ls.map(l=>`<div class="les ${isCx(l)?'x':''}"><div class="h">${l.start.slice(11,16)}</div><div><div class="s">${esc(l.subject||'Cours')}${isCx(l)?'<span class="chip late">Annulé</span>':l.status?`<span class="chip">${esc(l.status)}</span>`:''}${l.canceled?'':`<button class="chip" data-act="cx" data-k="${l.start}">${S.cx&&S.cx[l.start]?'Rétablir':'Prof absent'}</button>`}</div><div class="r">${esc([l.room,l.teacher].filter(Boolean).join(' · '))} · jusqu’à ${l.end.slice(11,16)}</div></div></div>`).join(''):`<div class="mut">${E.lessons?'Aucun cours ce jour-là.':'Chargement…'}</div>`}</div>`}
 
+const BUS={"valid":["2026-09-01","2027-08-31"],"e91valid":["2026-09-01","2027-07-02"],"hol":[["2026-10-17","2026-11-01","Vacances de la Toussaint"],["2026-12-19","2027-01-03","Vacances de Noël"],["2027-02-13","2027-02-28","Vacances d’hiver"],["2027-04-10","2027-04-25","Vacances de printemps"],["2027-05-06","2027-05-09","Pont de l’Ascension"],["2027-07-03","2027-08-31","Vacances d’été"]],"L":{"LV":"Les Vergnades","LG":"Le Ginestet","LK":"Parking des Vergniades","LP":"Le Portalet","LR":"Place des Récollets","LB":"Le Bédéret","LS":"Ste Foy","LM":"La Mine"},"A":{"AP":"Place de la Paix","AG":"Gare routière","AC":"Champs de Mars","AA":"Lycée Astier Roqua"},"trips":[{"l":"E13","d":"from","w":[1,2,3,4,5,6],"t":{"AP":"06:50","AG":"07:00","LG":"07:26","LV":"07:29"}},{"l":"E13","d":"from","w":[0,1,2,3,4,5,6],"t":{"AP":"11:20","AG":"11:30","LG":"11:51","LV":"11:56"}},{"l":"E13","d":"from","w":[1,2,3,4,5,6],"t":{"AP":"12:30","AG":"12:40","LG":"13:00","LV":"13:04"}},{"l":"E13","d":"from","w":[1,2,3,4,5,6],"t":{"AP":"14:10","AG":"14:20","LG":"14:46","LV":"14:49"}},{"l":"E13","d":"from","w":[1,2,3,4,5],"t":{"AP":"17:15","AG":"17:25","LG":"17:51","LV":"17:54"}},{"l":"E13","d":"from","w":[1,2,3,4,5],"t":{"AP":"18:15","AG":"18:25","LG":"18:51","LV":"18:54"}},{"l":"E91","d":"from","w":[1,2,3,4,5],"t":{"AP":"07:40","LM":"08:04","LS":"08:05","LB":"08:06","LR":"08:07","LP":"08:20"},"s":1},{"l":"E91","d":"from","w":[1,2,3,4,5],"t":{"AG":"07:45","LG":"08:07","LK":"08:10","LP":"08:20"},"s":1},{"l":"E91","d":"from","w":[1],"t":{"AG":"07:45","LG":"08:02","LK":"08:07","LP":"08:20"},"s":1},{"l":"E91","d":"from","w":[3],"t":{"AP":"12:10","LM":"12:44","LS":"12:46","LB":"12:46","LR":"12:47","LV":"12:53"},"s":1},{"l":"E91","d":"from","w":[5],"t":{"AP":"15:50","LG":"16:10","LK":"16:13","LP":"16:25"},"s":1},{"l":"E91","d":"from","w":[1,2,4,5],"t":{"AP":"16:20","LG":"16:40","LK":"16:43"},"s":1},{"l":"E91","d":"from","w":[1,2,4,5],"t":{"AP":"17:10","LM":"17:29","LS":"17:30","LB":"17:31","LR":"17:32","LV":"17:37","LG":"17:38"},"s":1},{"l":"E91","d":"from","w":[1,2,4,5],"t":{"AP":"18:05","LM":"18:30","LS":"18:31","LB":"18:32","LR":"18:33","LV":"18:37","LG":"18:40"},"s":1},{"l":"E13","d":"to","w":[1,2,3,4,5],"t":{"LV":"06:38","LG":"06:41","AG":"07:10","AP":"07:20"}},{"l":"E13","d":"to","w":[1,2,3,4,5],"t":{"LV":"08:02","LG":"08:05","AG":"08:34","AP":"08:44"}},{"l":"E13","d":"to","w":[1,2,3,4,5,6],"t":{"LV":"09:01","LG":"09:04","AG":"09:33","AP":"09:43"}},{"l":"E13","d":"to","w":[1,2,3,4,5,6],"t":{"LV":"11:41","LG":"11:44","AG":"12:10","AP":"12:20"}},{"l":"E13","d":"to","w":[1,2,3,4,5],"t":{"LV":"14:10","LG":"14:13","AG":"14:40","AP":"14:50"}},{"l":"E13","d":"to","w":[1,2,3,4,5,6,0],"t":{"LV":"15:10","LG":"15:13","AG":"15:40","AP":"15:50"}},{"l":"E13","d":"to","w":[5,0],"t":{"LV":"16:10","LG":"16:13","AG":"16:40","AP":"16:50"}},{"l":"E13","d":"to","w":[1,2,4,5],"t":{"LV":"17:25","LG":"17:28","AG":"17:55","AP":"18:05"}},{"l":"E13","d":"to","w":[1,2,3,4,5,6],"t":{"LV":"18:07","LG":"18:10","AG":"18:35","AP":"18:45"}},{"l":"E13","d":"to","w":[1,2,3,4,5],"t":{"LV":"19:03","LG":"19:06","AG":"19:35","AP":"19:45"}},{"l":"E91","d":"to","w":[1,2,3,4,5],"t":{"LR":"06:50","LB":"06:51","LS":"06:52","LM":"06:55","AC":"07:17","AP":"07:20"},"s":1},{"l":"E91","d":"to","w":[1,2,3,4,5],"t":{"LV":"06:55","LG":"06:57","AC":"07:27","AP":"07:30"},"s":1},{"l":"E91","d":"to","w":[1,2,3,4,5],"t":{"LP":"08:17","LV":"08:21","LG":"08:23","AC":"08:43","AP":"08:45"},"s":1},{"l":"E91","d":"to","w":[3],"t":{"LP":"13:02","LR":"13:06","LB":"13:07","LS":"13:08","LM":"13:09","AP":"13:35"},"s":1},{"l":"E91","d":"to","w":[5],"t":{"LP":"15:37","LV":"15:40","LG":"15:41","AG":"15:58","AP":"16:05"},"s":1},{"l":"E91","d":"to","w":[5],"t":{"LP":"16:17","LV":"16:20","LG":"16:21","AG":"16:38","AP":"16:45"},"s":1},{"l":"E91","d":"to","w":[1,2,4,5],"t":{"LP":"17:07","LR":"17:11","LB":"17:12","LS":"17:13","LM":"17:14","AP":"17:35"},"s":1}]};
 /*PURE*/
+function busPlan(d){
+  const c=S.cfg,di=dayInfo(d),w=di.off?0:di.w,res={recs:[],infos:[]};
+  if(c.busOn==='0'||di.off||w<1)return res;
+  const ls=(E.lessons||[]).filter(l=>l.start.slice(0,10)===d&&!isCx(l));if(!ls.length)return res;
+  const first=Math.min(...ls.map(l=>toMin(l.start.slice(11,16)))),last=Math.max(...ls.map(l=>toMin(l.end.slice(11,16))));
+  const sch=c.busSchool||'AP',walk=+(c.busWalk??10),mg=+(c.busMargin??5);
+  const sc=d>=BUS.e91valid[0]&&d<=BUS.e91valid[1]&&!BUS.hol.some(h=>d>=h[0]&&d<=h[1]);
+  const ok=(x,home,lines)=>x.w.includes(w)&&(lines==='both'||x.l===lines)&&(x.l!=='E91'||sc)&&x.t[home]&&x.t[sch];
+  const ih=c.internat||{},night=p=>{const pi=dayInfo(p);return pi.off||!ih[pi.w]};
+  res.first=first;res.last=last;
+  if(night(addDay(d,-1))){const home=c.busStopAM||'LR',b=BUS.trips.filter(x=>x.d==='to'&&ok(x,home,c.busLinesAM||'E91')&&toMin(x.t[sch])+walk+mg<=first).sort((a,b)=>toMin(b.t[sch])-toMin(a.t[sch]))[0];
+    if(b){const s=b.t[home],e=b.t[sch];res.morn={s:toMin(s),e:toMin(e),l:b.l};res.recs.push({l:'Bus '+b.l,s,e,d:[w],k:'rideF'});res.infos.push({s:toMin(s),e:toMin(s),t:'info',title:'Bus '+b.l+' · '+BUS.L[home]+' '+s+' → Aubenas '+e})}}
+  if(!ih[di.w]){const home=c.busStopPM||'LV',b=BUS.trips.filter(x=>x.d==='from'&&ok(x,home,c.busLinesPM||'both')&&toMin(x.t[sch])>=last+walk+mg).sort((a,b)=>toMin(a.t[sch])-toMin(b.t[sch]))[0];
+    if(b){const s=b.t[sch],e=b.t[home];res.eve={s:toMin(s),e:toMin(e),l:b.l};res.recs.push({l:'Bus '+b.l,s,e,d:[w],k:'rideF'});res.infos.push({s:toMin(s),e:toMin(s),t:'info',title:'Bus '+b.l+' · Aubenas '+s+' → '+BUS.L[home]+' '+e})}}
+  return res}
 const toMin=s=>+s.slice(0,2)*60+ +s.slice(3,5);
 const hhmm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 const nowMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes()};
@@ -564,23 +587,26 @@ const easter=y=>{const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%
 function holiday(d){const y=+d.slice(0,4),e=easter(y),at=n=>iso(new Date(y,e.getMonth(),e.getDate()+n));
   const fx={'01-01':'Jour de l’An','05-01':'Fête du Travail','05-08':'Victoire 1945','07-14':'Fête nationale','08-15':'Assomption','11-01':'Toussaint','11-11':'Armistice','12-25':'Noël'};
   return fx[d.slice(5)]||({[at(1)]:'Lundi de Pâques',[at(39)]:'Ascension',[at(50)]:'Lundi de Pentecôte'})[d]||null}
-function dayInfo(d){const w=new Date(d+'T00:00').getDay(),hol=holiday(d),sp=S.special.filter(x=>x.d===d);return{w,hol,sp,off:!!hol||sp.some(x=>x.k!=='note')}}
+function dayInfo(d){const w=new Date(d+'T00:00').getDay(),hol=holiday(d)||(S.cfg.vacAuto!=='0'?((BUS.hol.find(h=>d>=h[0]&&d<=h[1])||[])[2]||''):''),sp=S.special.filter(x=>x.d===d);return{w,hol,sp,off:!!hol||sp.some(x=>x.k!=='note')}}
 function subjAvg(before){const m={},o={};S.log.filter(x=>x.r&&x.subject&&x.d<before).forEach(x=>(m[x.subject]=m[x.subject]||[]).push(x.r));for(const k in m)o[k]=avg(m[k]);return o}
 function subjectsList(d){
   const c=S.cfg.subjects.split(',').map(x=>x.trim()).filter(Boolean);
   const base=c.length?c:[...new Set((E.lessons||[]).filter(l=>!isCx(l)).map(l=>l.subject).filter(Boolean))];
   const nx=new Set((E.lessons||[]).filter(l=>l.start.slice(0,10)===addDay(d,1)&&!isCx(l)).map(l=>(l.subject||'').toLowerCase()));
-  const av=subjAvg(d);
-  return base.sort((a,b)=>((nx.has(a.toLowerCase())?0:1)-(nx.has(b.toLowerCase())?0:1))||((av[a]??3)-(av[b]??3))||a.localeCompare(b,'fr'))}
+  const av=subjAvg(d),gp={};base.forEach(a=>gp[a]=subjGap(a,d));const ng=a=>gp[a]>=7?0:1;
+  return base.sort((a,b)=>((nx.has(a.toLowerCase())?0:1)-(nx.has(b.toLowerCase())?0:1))||(ng(a)-ng(b))||(ng(a)===0?gp[b]-gp[a]:0)||((av[a]??3)-(av[b]??3))||a.localeCompare(b,'fr'))}
+function subjGap(a,d){let m='';S.log.forEach(x=>{if(x.subject&&x.d<=d&&subjShort(x.subject).toLowerCase()===a.toLowerCase()&&x.d>m)m=x.d});return m?Math.round((new Date(d+'T00:00')-new Date(m+'T00:00'))/864e5):999}
 function plan(d){
-  const c=S.cfg,di=dayInfo(d),w=di.off?0:di.w,we=w===0||w===6,fixed=[],out=[],work=[],infos=[];
-  const od=di.off&&di.w>0&&di.w<6,wake=toMin(od&&c.wakeOff?c.wakeOff:((c.wakeDay&&c.wakeDay[w])||(we&&c.wakeWE?c.wakeWE:c.wake))),sleep=toMin(od&&c.sleepOff?c.sleepOff:(we&&c.sleepWE?c.sleepWE:c.sleep));
+  const c=S.cfg,di=dayInfo(d),w=di.off?0:di.w,we=w===0||w===6,fixed=[],out=[],work=[],infos=[],bp=busPlan(d);
+  const od=di.off&&di.w>0&&di.w<6,wake0=toMin(od&&c.wakeOff?c.wakeOff:((c.wakeDay&&c.wakeDay[w])||(we&&c.wakeWE?c.wakeWE:c.wake))),sleep=toMin(od&&c.sleepOff?c.sleepOff:(we&&c.sleepWE?c.sleepWE:c.sleep));
+  const mr0=(S.mornDay[w]&&S.mornDay[w].length?S.mornDay[w]:S.morning.length?S.morning:[{l:'Réveil',m:30}]),wake=bp.morn?Math.min(wake0,bp.morn.s-(+(c.busHomeWalk??5))-mr0.reduce((a,x)=>a+x.m,0)):wake0;
   let t0=wake;(S.mornDay[w]&&S.mornDay[w].length?S.mornDay[w]:S.morning.length?S.morning:[{l:'Réveil',m:30}]).forEach(x=>{fixed.push({s:t0,e:t0+x.m,t:'routine',title:x.l});t0+=x.m});
   const W=t0,la=S.late.reduce((a,x)=>a+x.m,0),Z=sleep-(la||30);let t1=Z;
   S.late.forEach(x=>{fixed.push({s:t1,e:t1+x.m,t:'routine',title:x.l});t1+=x.m});
   if(!di.off)(E.lessons||[]).filter(l=>l.start.slice(0,10)===d&&!isCx(l)).forEach(l=>fixed.push({s:toMin(l.start.slice(11,16)),e:toMin(l.end.slice(11,16)),t:'cours',title:l.subject||'Cours',sub:[l.room,l.status].filter(Boolean).join(' · '),ls:l.start}));
-  S.rec.filter(r=>r.d.includes(w)&&r.s&&r.e).forEach(r=>{const a=toMin(r.s),b=toMin(r.e);
+  [...S.rec.filter(r=>!((bp.morn&&(r.k==='rideF'||r.k==='rideB')&&toMin(r.s)<bp.first)||(bp.eve&&(r.k==='rideF'||r.k==='rideB')&&toMin(r.s)>=bp.last))),...bp.recs].filter(r=>r.d.includes(w)&&r.s&&r.e).forEach(r=>{const a=toMin(r.s),b=toMin(r.e);
     if(r.k==='work'||r.k==='rideF'){work.push({s:a,e:b,l:r.l,light:r.k==='rideF'});fixed.push({s:a,e:a,t:'mark'},{s:b,e:b,t:'mark'})}else fixed.push({s:a,e:b,t:r.k==='rideB'?'trajet':'fixe',title:r.l||'Obligation'})});
+  bp.infos.forEach(x=>infos.push(x));
   const io=c.internat&&c.internat[w];if(io)infos.push({s:toMin(io),e:toMin(io),t:'info',title:'Ouverture de l’internat'});
   const free=(s,e)=>!fixed.some(b=>s<b.e&&e>b.s);
   c.meals.forEach(m=>{const s=toMin(m.t),du=+m.d||30;for(const o of [0,15,-15,30,-30,45,-45,60,-60,90,-90,120,-120]){if(free(s+o,s+o+du)){fixed.push({s:s+o,e:s+o+du,t:'repas',title:m.n||'Repas'});return}}});
@@ -598,7 +624,9 @@ function plan(d){
   const mkq=t=>({t:'task',title:t.title,id:t.id,done:t.done,dur:+t.dur||0,win:pwin(t),sj:t.hw?(t.hwSubject||subjShort(t.title)):''});
   const lp=new Map(S.lists.map((l,i)=>[l.id,i])),ps=new Map(S.tasks.map((t,i)=>[t.id,i]));
   const ord=(a,b)=>((lp.get(a.list)??9)-(lp.get(b.list)??9))||ps.get(a.id)-ps.get(b.id);
-  const q=[...live.filter(t=>!t.hw).sort(ord).map(mkq),...live.filter(t=>t.hw).sort((a,b)=>hwScore(a)-hwScore(b)||cmp(a,b)).map(mkq)];
+  const cmx=+(c.catchMin??90),keep=new Set();let acc=0;live.filter(t=>!t.hw&&!t.done&&t.date&&t.date<d).sort(ord).forEach((t,i)=>{const du=+t.dur||30;if(i===0||acc+du<=cmx){keep.add(t.id);acc+=du}});
+  const lv=live.filter(t=>!(t.date&&t.date<d&&!t.hw&&!t.done)||keep.has(t.id));
+  const q=[...lv.filter(t=>!t.hw).sort(ord).map(mkq),...live.filter(t=>t.hw).sort((a,b)=>hwScore(a)-hwScore(b)||cmp(a,b)).map(mkq)];
   S.exams.forEach(e=>{const j=Math.round((new Date(e.d+'T00:00')-new Date(d+'T00:00'))/864e5);
     if(j===7||j===3||j===1)q.push({t:'revision',title:'Contrôle · '+e.subject,subject:e.subject,sub:'J-'+j+(e.n?' · '+e.n:''),exam:e.d});
     else if(j===-1||j===-7)q.push({t:'revision',title:'Rappel · '+e.subject,subject:e.subject,sub:'J+'+(-j),dur:20,exam:e.d})});
@@ -644,16 +672,19 @@ const WZ=[
  {t:'times',h:'Réveil et coucher',p:'L’heure de réveil est le moment où tu te lèves : je ne la compte jamais comme du temps libre.',f:[['wake','Réveil (semaine)','time'],['sleep','Coucher (semaine)','time'],['wakeWE','Réveil (week-end)','time'],['sleepWE','Coucher (week-end)','time'],['wakeOff','Réveil (jour sans internat : grève, férié)','time'],['sleepOff','Coucher (jour sans internat)','time']]},
  {t:'meals',h:'Tes repas',p:'Combien de repas par jour, et à quelle heure ? (OMAD = un seul.)'},
  {t:'ih',h:'Ouverture de l’internat',p:'À quelle heure l’internat ouvre chaque jour ? Laisse vide s’il est fermé.'},
- {t:'blocks',h:'Ta semaine',p:'Ajoute ce qui est fixe chaque jour en dehors des cours : trajets, perm, étude, activités. Choisis le jour en haut. Pour un même créneau sur plusieurs jours, active les lettres dans sa fiche. Pour chaque créneau, tu choisis : fixe, temps de travail, trajet libre (je peux te faire réviser, ex. bus) ou trajet occupé.'},
+ {t:'bus',h:'Ton bus',p:'Quand tu rentres chez toi le soir (pas d’internat), je choisis le bus du retour après ton dernier cours. Le matin après une nuit à la maison, je choisis le bus de l’aller, et je règle ton réveil en conséquence. Les horaires E13 et E91 de 2026-2027 sont déjà dedans.'},
+  {t:'blocks',h:'Ta semaine',p:'Ajoute ce qui est fixe chaque jour en dehors des cours : trajets, perm, étude, activités. Choisis le jour en haut. Pour un même créneau sur plusieurs jours, active les lettres dans sa fiche. Pour chaque créneau, tu choisis : fixe, temps de travail, trajet libre (je peux te faire réviser, ex. bus) ou trajet occupé.'},
  {t:'routine',k:'morning',h:'Routine du matin',p:'Une étape par ligne : nom puis minutes. Elle commence à ton réveil, à la minute près.'},
  {t:'routine',k:'late',h:'Routine du soir',p:'Une étape par ligne : nom puis minutes. Elle se termine à ton coucher.'},
- {t:'times',h:'Travail',p:'Comment tu veux que je remplisse tes trous.',f:[['block','Durée d’une session (min)','number'],['brk','Pause entre deux sessions (min)','number'],['weWork','Travail souhaité le week-end (heures par jour)','number'],['subjects','Matières à réviser (virgules, vide = tes cours)','text'],['fill','Remplir avec des révisions quand il n’y a plus de tâches ?','fill']]}
+ {t:'times',h:'Travail',p:'Comment tu veux que je remplisse tes trous.',f:[['block','Durée d’une session (min)','number'],['brk','Pause entre deux sessions (min)','number'],['weWork','Travail souhaité le week-end (heures par jour)','number'],['catchMin','Rattrapage max par jour (min)','number'],['subjects','Matières à réviser (virgules, vide = tes cours)','text'],['fill','Remplir avec des révisions quand il n’y a plus de tâches ?','fill']]}
 ];
 function rowHTML(r){return`<div class="rrow"><div class="row2"><input data-rf="l" data-id="${r.id}" value="${esc(r.l)}" placeholder="Intitulé"><button class="icon" data-act="rdel" data-id="${r.id}" aria-label="Supprimer">✕</button></div><div class="row2" style="margin-top:6px"><input type="time" data-rf="s" data-id="${r.id}" value="${r.s}"><input type="time" data-rf="e" data-id="${r.id}" value="${r.e}"></div><div class="row2" style="margin-top:8px;justify-content:space-between">${DORD.map(w=>`<button class="dch ${r.d.includes(w)?'on':''}" data-act="rday" data-id="${r.id}" data-w="${w}">${DL[w]}</button>`).join('')}</div><div class="tags" style="margin:8px 0 0">${[['','Fixe'],['work','Temps de travail'],['rideF','Trajet libre'],['rideB','Trajet occupé']].map(([k,l])=>`<button class="tg ${(r.k||'')===k?'on':''}" data-act="rkind" data-id="${r.id}" data-k="${k}">${l}</button>`).join('')}</div></div>`}
 function wizHTML(){const i=ui.wiz,st=WZ[i];let b='';
   if(st.t==='times')b=st.f.map(([k,l,ty])=>ty==='fill'?`<label>${l}</label><select data-c="fill"><option value="1" ${S.cfg.fill!=='0'?'selected':''}>Oui</option><option value="0" ${S.cfg.fill==='0'?'selected':''}>Non, seulement mes tâches</option></select>`:`<label>${l}</label><input data-c="${k}" type="${ty}" value="${esc(S.cfg[k]??'')}" ${ty==='number'?'inputmode="numeric"':''}>`).join('');
   if(st.t==='meals')b=S.cfg.meals.map((m,j)=>`<div class="rrow"><div class="row2"><input data-mf="n" data-m="${j}" value="${esc(m.n)}"><button class="icon" data-act="mdel" data-j="${j}" aria-label="Supprimer">✕</button></div><div class="row2" style="margin-top:6px"><input type="time" data-mf="t" data-m="${j}" value="${m.t}"><input type="number" inputmode="numeric" data-mf="d" data-m="${j}" value="${m.d}" aria-label="Durée en minutes"></div></div>`).join('')+`<div class="row2"><button class="pill" data-act="madd">+ Repas</button><button class="pill" data-act="momad">Un seul repas (OMAD)</button></div><div class="mu" style="margin-top:8px">Heure, puis durée en minutes. Je décale le repas si un cours tombe dessus.</div>`;
   if(st.t==='ih')b=DORD.map(w=>`<div class="row2" style="margin-top:8px"><div style="width:110px">${JN[w]}</div><input type="time" data-ih="${w}" value="${(S.cfg.internat||{})[w]||''}"></div>`).join('');
+  if(st.t==='bus'){const cf=S.cfg,sel=(k,o)=>`<select data-c="${k}">${o.map(([a,t])=>`<option value="${a}" ${String(cf[k])===String(a)?'selected':''}>${esc(t)}</option>`).join('')}</select>`,num=k=>`<input type="number" inputmode="numeric" min="0" max="60" data-c="${k}" value="${cf[k]??''}">`;
+    b=`<label>Bus automatique</label>${sel('busOn',[['1','Oui'],['0','Non']])}<label>Matin : j’attends le bus à</label>${sel('busStopAM',Object.entries(BUS.L))}<label>Matin : quels cars ?</label>${sel('busLinesAM',[['both','E13 et E91'],['E13','E13 seulement'],['E91','E91 seulement']])}<label>Soir : je descends à</label>${sel('busStopPM',Object.entries(BUS.L))}<label>Soir : quels cars ?</label>${sel('busLinesPM',[['both','E13 et E91'],['E13','E13 seulement'],['E91','E91 seulement']])}<label>Mon arrêt à Aubenas</label>${sel('busSchool',Object.entries(BUS.A))}<div class="tg3"><div><label>Marche maison → arrêt (min)</label>${num('busHomeWalk')}</div><div><label>Marche arrêt → lycée (min)</label>${num('busWalk')}</div></div><label>Marge de sécurité (min)</label>${num('busMargin')}`}
   if(st.t==='blocks'){const dy=ui.bd??1,KL={'':'Fixe',work:'Temps de travail',rideF:'Trajet libre',rideB:'Trajet occupé'},rows=S.rec.filter(r=>r.d.includes(dy)).sort((a,c)=>a.s<c.s?-1:a.s>c.s?1:0),pre=presets(dy),cus=(S.cfg.wakeDay||{})[dy]||(S.mornDay[dy]||[]).length;
     b=`<div class="dsel">${DORD.map(w=>`<button class="${w===dy?'on':''} ${S.rec.some(r=>r.d.includes(w))?'has':''}" data-act="bday" data-w="${w}" aria-label="${JN[w]}">${DL[w]}</button>`).join('')}</div><h4 class="dn">${JN[dy]}</h4>`
     +(rows.length?`<div class="card2">${rows.map(r=>`<div class="slot ${ui.ro===r.id?'open':''}"><button class="slh" data-act="rtoggle" data-id="${r.id}"><span class="tm">${r.s}<br>${r.e}</span><span class="nm"><b>${esc(r.l||'Sans titre')}</b><span>${KL[r.k||'']}${r.d.length>1?' · '+r.d.length+' jours':''}</span></span><i>›</i></button>${ui.ro===r.id?`<div class="slb">${rowHTML(r)}</div>`:''}</div>`).join('')}</div>`:'<div class="mu" style="padding:12px 0">Rien de fixe ce jour-là. Ajoute un trajet, une perm, une activité…</div>')
@@ -759,7 +790,7 @@ function prepHTML(){const tm=addDay(today(),1),pl=plan(tm),co=pl.filter(b=>b.t==
   const row=t=>{const[a,b]=splitT(t.title);return`<div class="it"><i class="d" style="background:hsl(${hue(a)} 62% 62%)"></i><div class="tx"><b>${esc(a)}</b>${b?`<span>${esc(b)}</span>`:''}</div>${t.date?`<span class="chip ${t.date<today()?'late':''}">${fmt(t.date)}</span>`:''}</div>`};
   return`<div class="sh"><div class="bar"></div><button class="x" data-act="close" aria-label="Fermer">✕</button></div>
   <div class="k2">Préparer demain</div><h3 style="margin:2px 0 0;font-size:22px;padding-right:40px;text-transform:capitalize">${new Date(tm+'T00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</h3>
-  <div class="cs">${di.hol?`<span class="chip">${esc(di.hol)}</span>`:''}<span class="chip">${co.length?co.length+' cours · '+hhmm(co[0].s)+'–'+hhmm(co[co.length-1].e):'Pas de cours'}</span><span class="chip">${Math.round(work/6)/10} h de travail</span></div>
+  <div class="cs">${di.hol?`<span class="chip">${esc(di.hol)}</span>`:''}<span class="chip">${co.length?co.length+' cours · '+hhmm(co[0].s)+'–'+hhmm(co[co.length-1].e):'Pas de cours'}</span><span class="chip">${Math.round(work/6)/10} h de travail</span>${busPlan(tm).infos.map(x=>`<span class="chip">🚌 ${esc(x.title)}</span>`).join('')}</div>
   ${df.length?`<div class="nt2">À venir : ${df.map(x=>'contrôle de '+esc(x.subject)+' le '+fmt(x.d)).join(', ')}</div>`:''}
   <div class="sec"><b>Tes tâches</b><span class="mu">${all.length}</span></div>
   <div class="card2">${tt.map(row).join('')||'<div class="mu" style="padding:14px 0">Rien en attente</div>'}</div>${all.length>6?`<div class="mu" style="margin-top:6px">+ ${all.length-6} autres dans l’onglet Tâches</div>`:''}
@@ -788,7 +819,7 @@ function chart2HTML(){const w=weekStats();if(!w.tp&&!w.tr)return`<div class="mu"
 function bilanHTML(){const td=today(),w=weekStats(),L=w.L,rs=L.filter(x=>x.r).map(x=>x.r),by={};
   L.forEach(x=>{const k=subjShort(x.subject||x.title);(by[k]=by[k]||{m:0,r:[]});by[k].m+=x.real??x.mins??0;if(x.r)by[k].r.push(x.r)});
   const top=Object.entries(by).sort((a,b)=>b[1].m-a[1].m).slice(0,3),weak=Object.entries(by).filter(e=>e[1].r.length).map(e=>[e[0],avg(e[1].r)]).sort((a,b)=>a[1]-b[1])[0];
-  const best=[...w.D].sort((a,b)=>b.real-a.real)[0];
+  const best=[...w.D].sort((a,b)=>b.real-a.real)[0],neg=subjectsList(td).map(x=>[x,subjGap(x,td)]).filter(x=>x[1]>=7).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const nxt=[...Array(7)].map((_,i)=>{const d=addDay(td,i+1),pl=plan(d),di=dayInfo(d),co=pl.filter(b=>b.t==='cours').length,wk=pl.filter(b=>b.t==='task'||b.t==='revision').reduce((a,b)=>a+b.e-b.s,0);
     return`<div class="wk ${di.off||!co?'off':''}"><div class="wd"><b>${wkd(d,{weekday:'short'}).replace('.','')}</b><span>${new Date(d+'T00:00').getDate()}</span></div><div class="wm"><div class="wt">${di.hol?esc(di.hol):co?co+' cours':'Pas de cours'}</div><div class="wb"><i style="width:${Math.min(100,Math.round(wk/540*100))}%"></i></div></div><div class="wh">${fh(wk)}</div></div>`}).join('');
   const ex=S.exams.filter(x=>x.d>td&&x.d<=addDay(td,7)),hw=S.tasks.filter(t=>t.hw&&!t.done&&t.date>td&&t.date<=addDay(td,7)).length;
@@ -797,6 +828,7 @@ function bilanHTML(){const td=today(),w=weekStats(),L=w.L,rs=L.filter(x=>x.r).ma
   <div class="tiles"><div class="tile"><b>${L.length}</b><span>session${L.length>1?'s':''}</span></div><div class="tile"><b>${fh(w.tr)}</b><span>travaillé</span></div><div class="tile"><b>${w.tp?w.pct+' %':'—'}</b><span>du prévu</span></div></div>
   ${rs.length?`<div class="mu" style="text-align:center;margin-top:8px">Humeur moyenne ${avg(rs).toFixed(1)}/5</div>`:''}
   ${best&&best.real?`<div class="card2" style="margin-top:14px"><div class="ins"><i>🏆</i><span>Meilleur jour : <b>${wkd(best.d,{weekday:'long'})}</b> (${fh(best.real)})</span></div>${top.length?`<div class="ins"><i>📚</i><span>Le plus travaillé : <b>${top.map(t=>esc(t[0])).join(', ')}</b></span></div>`:''}${weak?`<div class="ins"><i>🎯</i><span>À renforcer : <b>${esc(weak[0])}</b> (${weak[1].toFixed(1)}/5)</span></div>`:''}</div>`:''}
+  ${neg.length?`<div class="card2" style="margin-top:10px"><div class="ins" style="border-top:0"><i>⚠️</i><span>Matières négligées : <b>${neg.map(x=>esc(x[0])+' ('+(x[1]>=999?'jamais':x[1]+' j')+')').join(', ')}</b></span></div></div>`:''}
   <div class="sec"><b>Semaine prochaine</b></div><div class="card2">${nxt}</div>
   ${ex.length||hw?`<div class="cs" style="margin-top:10px">${ex.map(x=>`<span class="chip">Contrôle ${esc(x.subject)} · ${fmt(x.d)}</span>`).join('')}${hw?`<span class="chip">${hw} devoir${hw>1?'s':''} à rendre</span>`:''}</div>`:''}
   <div class="foot"><button class="pill" data-act="close">Fermer</button><button class="pill main" data-act="bready">C’est noté ✓</button></div>`}
