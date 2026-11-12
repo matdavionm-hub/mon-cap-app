@@ -225,6 +225,10 @@ html[data-fs=s] body{font-size:14px;line-height:21px}html[data-fs=s] .nt{font-si
 .busc{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--soft);font-size:14px;line-height:20px}.busc.soon{background:var(--acc);color:var(--onacc);font-weight:600}
 #sbar{padding:0 0 10px}#sbar input{width:100%;height:44px;border-radius:14px;padding:0 14px;background:var(--soft);font-size:16px}
 .swc{display:flex;gap:10px;margin:8px 0 4px}.swc button{width:38px;height:38px;border-radius:50%;border:3px solid transparent}.swc button.on{border-color:var(--fg)}
+.set{width:100%;display:flex;align-items:center;gap:14px;padding:13px 0;text-align:left;border-top:1px solid var(--line)}.card2>.set:first-child{border-top:0}
+.set .ic{flex:none;width:36px;height:36px;border-radius:11px;background:var(--card);display:grid;place-items:center;font-size:18px}
+.set .tx{flex:1;min-width:0}.set .tx b{display:block;font-weight:600;font-size:15px}.set .tx span{display:block;font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.set>i{font-style:normal;font-size:22px;color:var(--mut)}.set.dg .tx b{color:var(--red)}
 </style>
 </head>
 <body>
@@ -331,7 +335,7 @@ function renderMain(){
    (done.length?`<button class="done-h" data-act="showdone"><span>${S.showDone?'▾':'▸'}</span>Terminées (${done.length})</button>${S.showDone?done.map(t=>blk(t,'dn',false)).join(''):''}`:'');
   ui.fx=null}
 
-function renderSheet(){const p=$('#panel'),k=(ui.sheet||'')+'|'+(ui.sheet==='wiz'?ui.wiz:'')+'|'+(ui.open||'')+'|'+(ui.det?ui.det.d+':'+ui.det.s:''),keep=p.dataset.k===k?p.scrollTop:0;
+function renderSheet(){if(!ui.sheet)ui.from=null;const p=$('#panel'),k=(ui.sheet||'')+'|'+(ui.sheet==='wiz'?ui.wiz:'')+'|'+(ui.open||'')+'|'+(ui.det?ui.det.d+':'+ui.det.s:''),keep=p.dataset.k===k?p.scrollTop:0;
   renderSheet0();p.dataset.k=ui.sheet?k:'';p.scrollTop=ui.sheet?keep:0}
 function renderSheet0(){
   const p=$('#panel'),s=ui.sheet;
@@ -356,6 +360,7 @@ function renderSheet0(){
     <div class="sec"><b>Thème</b></div>${seg('theme',[['auto','Auto'],['light','Clair'],['dark','Sombre']])}
     <div class="sec"><b>Couleur</b></div><div class="swc">${Object.entries(ACC).map(([k,v])=>`<button class="${(c.acc||'indigo')===k?'on':''}" style="background:${v[0]}" data-act="setc" data-k="acc" data-v="${k}" aria-label="${k}"></button>`).join('')}</div>
     <div class="sec"><b>Taille du texte</b></div>${seg('fs',[['s','Petit'],['m','Normal'],['l','Grand']])}
+    <div class="sec"><b>Balayer une tâche pour la cocher ou la reporter</b></div>${seg('swipe',[['1','Activé'],['0','Désactivé']])}<div class="mu">Droite = fait · gauche = demain. Il faut un long balayage bien horizontal, sinon rien ne se passe.</div>
     <div class="sec"><b>Main d’usage</b></div><div class="seg" style="margin:6px 0"><button data-act="hand" data-v="L">Gaucher</button><button data-act="hand" data-v="R">Droitier</button></div>
     <div class="sec"><b>Bouton +</b></div>${seg('fabL',[['0','À droite'],['1','À gauche']])}
     <div class="sec"><b>Poignée ⠿ de déplacement</b></div>${seg('gripR',[['0','À gauche'],['1','À droite']])}
@@ -387,20 +392,42 @@ function renderSheet0(){
     <div class="sec"><b>Ressenti</b><span class="mu">facultatif</span></div>
     <div class="tags">${['Concentré','Distrait','Trop long','Trop difficile','Facile'].map(k=>`<button class="tg ${r.tags.includes(k)?'on':''}" data-act="tag" data-k="${k}">${k}</button>`).join('')}</div>
     <div class="foot"><button class="pill" data-act="rateskip">Passer</button><button class="pill main" data-act="ratesave">Enregistrer</button></div>`}
-  else if(s==='cfg'){p.innerHTML=`<div class="bar"></div><h3 style="margin:0 0 8px;font-size:18px">Personnaliser</h3>
-    <button class="mi" data-act="wiz"><span>🧭</span>Questionnaire sur mon emploi du temps</button>
-    <button class="mi" data-act="prep"><span>🌙</span>Préparer demain</button>
-    <button class="mi" data-act="bilan"><span>📊</span>Bilan de la semaine</button>
-    <button class="mi" data-act="hab"><span>🔁</span>Habitudes</button>
-    <button class="mi" data-act="exam"><span>📝</span>Contrôles à venir</button>
-    <button class="mi" data-act="spec"><span>📅</span>Jours spéciaux (grève, jour libre…)</button>
-    <button class="mi" data-act="edtpw"><span>🔑</span>Mot de passe des cours</button>
-    <button class="mi" data-act="look"><span>🎨</span>Apparence et confort</button>
-    <button class="mi" data-act="rem"><span>🔔</span>Rappels et agenda</button>
-    <button class="mi" data-act="bak"><span>💾</span>Sauvegardes</button>
-    <button class="mi" data-act="export"><span>⤓</span>Exporter une sauvegarde</button>
-    <button class="mi" data-act="import"><span>⤒</span>Importer une sauvegarde</button>
-    <button class="mi del" data-act="reset"><span style="color:inherit">⟲</span>Réinitialiser l’application</button>`}
+  else if(s==='cfg'){const c=S.cfg,td=today(),wi=h=>WZ.findIndex(w=>w.h.startsWith(h)),
+    row=(ic,t,sub,at,cl)=>`<button class="set ${cl||''}" ${at}><span class="ic">${ic}</span><span class="tx"><b>${t}</b>${sub?`<span>${esc(sub)}</span>`:''}</span><i>›</i></button>`,
+    go=to=>`data-act="go" data-to="${to}"`,st=(h,all)=>`data-act="wizat" data-i="${all?0:wi(h)}"${all?' data-all="1"':''}`,
+    nx=S.exams.filter(x=>x.d>=td).length,sp=(S.special||[]).filter(x=>x.d>=td).length,nr=S.rec.length,
+    th={auto:'Automatique',light:'Clair',dark:'Sombre'}[c.theme||'auto'];
+    p.innerHTML=`<div class="sh"><div class="bar"></div><button class="x" data-act="close" aria-label="Fermer">✕</button></div>
+    <div class="k2">Réglages</div><h3 style="margin:2px 0 0;font-size:24px;padding-right:40px">Mon Cap</h3>
+    <div class="sec"><b>Mon planning</b></div><div class="card2">
+      ${row('⏰','Réveil et coucher',c.wake+' → '+c.sleep,st('Réveil'))}
+      ${row('🍽️','Repas','Heures des repas',st('Tes repas'))}
+      ${row('🛏️','Internat','Jours et heures d’ouverture',st('Ouverture'))}
+      ${row('🚌','Bus',c.busOn==='0'?'Désactivé':'Matin : '+(BUS.L[c.busStopAM]||'?')+' · Soir : '+(BUS.L[c.busStopPM]||'?'),st('Ton bus'))}
+      ${row('🗓️','Ma semaine',nr+' créneau'+(nr>1?'x':'')+' fixe'+(nr>1?'s':''),st('Ta semaine'))}
+      ${row('🌅','Routines',S.morning.length+' étape'+(S.morning.length>1?'s':'')+' le matin · '+(S.late||[]).length+' le soir',st('Routine du matin'))}
+      ${row('📚','Temps de travail','Blocs, week-end, rattrapage',st('Travail'))}
+      ${row('🧭','Refaire tout le questionnaire','',st('',1))}
+    </div>
+    <div class="sec"><b>Mes outils</b></div><div class="card2">
+      ${row('🌙','Préparer demain','',go('prep'))}
+      ${row('📊','Bilan de la semaine','',go('bilan'))}
+      ${row('🔁','Habitudes','',go('hab'))}
+      ${row('📝','Contrôles à venir',nx?nx+' à venir':'',go('exam'))}
+      ${row('📅','Jours spéciaux','Grève, jour libre…'+(sp?' · '+sp+' à venir':''),go('spec'))}
+    </div>
+    <div class="sec"><b>Confort</b></div><div class="card2">
+      ${row('🎨','Apparence et gestes','Thème : '+th+' · balayage '+(c.swipe==='0'?'désactivé':'activé'),go('look'))}
+      ${row('🔔','Rappels et agenda','Export vers l’agenda du téléphone',go('rem'))}
+    </div>
+    <div class="sec"><b>Mes données</b></div><div class="card2">
+      ${row('🔑','Cours (Pronote)',localStorage.getItem('edtpass')?'Connecté':'Mot de passe à saisir','data-act="edtpw"')}
+      ${row('💾','Sauvegardes automatiques','Dernier fichier exporté : '+(S.lastBackup?fmt(S.lastBackup):'jamais'),go('bak'))}
+      ${row('⤓','Exporter un fichier','Envoyer ou enregistrer une sauvegarde','data-act="export"')}
+      ${row('⤒','Importer un fichier','','data-act="import"')}
+      ${row('⟲','Réinitialiser l’application','Efface toutes tes données','data-act="reset"','dg')}
+    </div>
+    <div class="foot"><button class="pill main" data-act="close">Fermer</button></div>`}
   else if(s==='bilan'){p.innerHTML=bilanHTML();p.scrollTop=0}
   else if(s==='hab'){p.innerHTML=habHTML()}
   else if(s==='prep'){p.innerHTML=prepHTML();p.scrollTop=0}
@@ -493,7 +520,7 @@ function startDrag(e){
   document.addEventListener('touchmove',tm,{passive:false});document.addEventListener('contextmenu',cm);raf=requestAnimationFrame(tick)}
 document.addEventListener('pointerdown',e=>{if(e.target.closest('.grip'))startDrag(e)});
 document.addEventListener('pointerdown',e=>{
-  if(dragging||ui.sheet||(e.pointerType==='mouse'&&e.button!==0))return;
+  if(dragging||ui.sheet||S.cfg.swipe==='0'||e.clientX<24||e.clientX>innerWidth-24||(e.pointerType==='mouse'&&e.button!==0))return;
   const body=e.target.closest('.blk.todo .task:not(.sub) .body');if(!body)return;
   const rw=body.closest('.task'),b=rw.closest('.blk'),t=get(rw.dataset.id);if(!t||b.classList.contains('leaving'))return;
   const x0=e.clientX,y0=e.clientY,id=e.pointerId;let lock=false,dx=0,dy=0;
@@ -514,8 +541,8 @@ document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;
   const a=el.dataset.act,rw=el.closest('.task'),t=rw&&get(rw.dataset.id);
   switch(a){
-    case 'wiz':ui.wiz=0;ui.sheet='wiz';break;
-    case 'wnext':if(ui.wiz>=WZ.length-1){S.setup=true;ui.sheet=null}else ui.wiz++;break;
+    case 'wiz':ui.wiz=0;ui.one=false;ui.sheet='wiz';break;
+    case 'wnext':if(ui.wiz>=WZ.length-1){S.setup=true;ui.sheet=ui.from||null;ui.from=null}else ui.wiz++;break;
     case 'wprev':ui.wiz--;break;
     case 'madd':S.cfg.meals.push({n:'Repas',t:'12:00',d:45});break;
     case 'momad':S.cfg.meals=[{n:'Repas',t:S.cfg.meals[0]?S.cfg.meals[0].t:'19:00',d:60}];break;
@@ -546,7 +573,9 @@ document.addEventListener('click',e=>{
     case 'export':shareBackup();return;
     case 'import':$('#imp').click();return;
     case 'tab':ui.tab=el.dataset.t;ui.sheet=null;window.scrollTo(0,0);break;
-    case 'cfg':ui.sheet='cfg';break;
+    case 'cfg':ui.from=null;ui.sheet='cfg';break;
+    case 'go':ui.from='cfg';ui.sheet=el.dataset.to;break;
+    case 'wizat':ui.from='cfg';ui.wiz=+el.dataset.i;ui.one=!el.dataset.all;ui.sheet='wiz';break;
     case 'hday':ui.hd=+el.dataset.d;break;
     case 'blk':{const d=el.dataset.d,st=+el.dataset.s,b=plan(d).find(x=>x.s===st);if(!b)return;
       cutBlock(b);
@@ -589,7 +618,7 @@ document.addEventListener('click',e=>{
     case 'rkind':{const r=S.rec.find(x=>x.id===el.dataset.id),k=el.dataset.k;r.k=(k&&r.k===k)?'':k;break}
     case 'rwork':{const r=S.rec.find(x=>x.id===el.dataset.id);r.k=r.k==='work'?'':'work';break}
     case 'reset':if(confirm('Réinitialiser l’application ? Toutes tes tâches, ton planning et ton suivi seront supprimés.')&&confirm('Dernière confirmation : tout effacer ?')){['gtasks','edtcache','edtpass'].forEach(k=>localStorage.removeItem(k));location.reload()}return;
-    case 'close':ui.sheet=null;break;
+    case 'close':ui.sheet=ui.from||null;ui.from=null;break;
     case 'nav':S.cur=el.dataset.id;ui.sheet=null;save();render();revealTab();return;
     case 'new':if(S.cur==='starred')S.cur=S.lists[0].id;ui.defDate=S.cur==='tomorrow'?addDay(today(),1):'';ui.sheet='add';break;
     case 'add':{const v=$('#nt').value.trim();if(v){const x=addTask({title:v,notes:$('#nn').value.trim(),date:$('#nd').value,dur:$('#nu').value,place:$('#np').value});ui.fx=x.id;vib(8)}ui.sheet=null;break}
@@ -794,9 +823,9 @@ function wizHTML(){const i=ui.wiz,st=WZ[i];let b='';
   const hint=st.p?(st.p.length>110?`<details class="hint"><summary>Comment ça marche ?</summary><div class="mu">${st.p}</div></details>`:`<div class="mu">${st.p}</div>`):'';
   if(st.t==='times'&&st.f[0][0]==='wake'){const g=(t,a,c)=>`<div class="tgr"><div class="g">${t}</div><div class="tg3"><div><label>Réveil</label><input type="time" data-c="${a}" value="${S.cfg[a]||''}"></div><div><label>Coucher</label><input type="time" data-c="${c}" value="${S.cfg[c]||''}"></div></div></div>`;
     b=g('Semaine (jours de cours)','wake','sleep')+g('Week-end','wakeWE','sleepWE')+g('Jour sans internat (grève, férié)','wakeOff','sleepOff')}
-  return`<div class="sh"><div class="bar"></div><button class="x" data-act="close" aria-label="Fermer">✕</button><div class="prog" style="margin:0 46px 0 0"><i style="width:${(i+1)/WZ.length*100}%"></i></div></div>
-  <div class="k2" style="margin-top:14px">Étape ${i+1} sur ${WZ.length}</div><h3 style="margin:2px 0 4px;font-size:22px">${st.h}</h3>${hint}${b}
-  <div class="foot">${i?`<button class="pill" data-act="wprev">Retour</button>`:''}<button class="pill main" data-act="wnext">${i===WZ.length-1?'Terminer':'Suivant'}</button></div>`}
+  return`<div class="sh"><div class="bar"></div><button class="x" data-act="close" aria-label="Fermer">✕</button>${ui.one?'':`<div class="prog" style="margin:0 46px 0 0"><i style="width:${(i+1)/WZ.length*100}%"></i></div>`}</div>
+  <div class="k2" style="margin-top:14px">${ui.one?'Réglage':'Étape '+(i+1)+' sur '+WZ.length}</div><h3 style="margin:2px 0 4px;font-size:22px">${st.h}</h3>${hint}${b}
+  ${ui.one?`<div class="foot"><button class="pill main" data-act="close">Enregistré · retour au menu</button></div>`:`<div class="foot">${i?`<button class="pill" data-act="wprev">Retour</button>`:''}<button class="pill main" data-act="wnext">${i===WZ.length-1?'Terminer':'Suivant'}</button></div>`}`}
 const link=h=>h.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
 function cutBlock(b){if(b.d!==today())return;const n=nowMin();if(n<b.e)S.cut[b.d+':'+b.s]=Math.max(n,b.s)}
 function detHTML(){const{d,s}=ui.det,b=plan(d).find(x=>x.s===s);if(!b)return'<div class="bar"></div><div class="mu">Bloc introuvable.</div>';
